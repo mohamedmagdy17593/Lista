@@ -24,6 +24,7 @@ export default {
       text: '#3E4C59',
       lightText: '#9AA5B1',
       danger: '#E66A6A',
+      success: '#7BC47F',
     },
   },
   dark: {
@@ -32,6 +33,7 @@ export default {
       text: '#F5F7FA',
       lightText: '#9AA5B1',
       danger: '#E66A6A',
+      success: '#7BC47F',
     },
   },
 }
