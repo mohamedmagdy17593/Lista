@@ -20,14 +20,18 @@ export default {
   ],
   light: {
     colors: {
-      bg: '#dfe6e9',
-      text: 'black',
+      bg: '#F5F7FA',
+      text: '#3E4C59',
+      lightText: '#9AA5B1',
+      danger: '#E66A6A',
     },
   },
   dark: {
     colors: {
-      bg: '#2d3436',
-      text: 'white',
+      bg: '#1F2933',
+      text: '#F5F7FA',
+      lightText: '#9AA5B1',
+      danger: '#E66A6A',
     },
   },
 }
