@@ -1,26 +1,32 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+/** @jsx jsx */
+import { jsx } from '@emotion/core'
+
+import { useState } from 'react'
+import { ThemeProvider } from 'emotion-theming'
+import Switch from 'react-switch'
+import theme from './theme'
 
 function App() {
+  const [themeMode, setThemeMode] = useState('light')
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <ThemeProvider theme={theme[themeMode]}>
+      <Nav setThemeMode={setThemeMode} themeMode={themeMode}></Nav>
+    </ThemeProvider>
+  )
 }
 
-export default App;
+function Nav({ setThemeMode, themeMode }) {
+  return (
+    <nav>
+      <Switch
+        onChange={() => {
+          setThemeMode(themeMode === 'light' ? 'dark' : 'light')
+        }}
+        checked={themeMode === 'light'}
+      ></Switch>
+    </nav>
+  )
+}
+
+export default App
