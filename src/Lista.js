@@ -172,7 +172,6 @@ function listaReducer(draft, action) {
       // get parant parant index & array
       action.path.pop() // children
       const parentIndex = action.path.pop()
-      console.log(parentIndex)
       if (parentIndex !== undefined) {
         const currentItem = items[currentItemIndex]
         items.splice(currentItemIndex, 1)
