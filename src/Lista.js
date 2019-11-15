@@ -160,16 +160,15 @@ function listaReducer(draft, action) {
       break
     }
     case 'TOGGLE_HIDE_CHILDREN': {
+      const currentItem = _.get(draft, action.path)
+      if (currentItem.children.length === 0) {
+        return
+      }
       visitLista(draft, item => {
         item.focus = false
       })
-      const currentItem = _.get(draft, action.path)
       currentItem.hideChildren = !currentItem.hideChildren
-      if (currentItem.hideChildren) {
-        currentItem.focus = true
-      } else {
-        currentItem.children[0].focus = true
-      }
+      currentItem.focus = true
       break
     }
     default: {
@@ -339,6 +338,8 @@ function ListaLi({ item, path }) {
           onTabAtStart={indentItem}
           onMoveUp={moveUp}
           onMoveDown={moveDown}
+          onCommandShiftD={deleteItem}
+          onCommandShiftW={toggleHideChildren}
         ></TextEditor>{' '}
         <span
           className="show-on-hover"
@@ -376,6 +377,8 @@ function TextEditor({
   onTabAtStart,
   onMoveUp,
   onMoveDown,
+  onCommandShiftD,
+  onCommandShiftW,
   ...rest
 }) {
   const theme = useTheme()
@@ -410,6 +413,7 @@ function TextEditor({
       onChange={onChange}
       onFocus={onFocus}
       onKeyDown={e => {
+        console.log(e.key)
         switch (e.key) {
           case 'Enter': {
             const cursorPosition = getCaretCharOffsetInDiv(e.target)
@@ -457,6 +461,21 @@ function TextEditor({
             const cursorPosition = getCaretCharOffsetInDiv(e.target)
             if (cursorPosition === 0) {
               onTabAtStart()
+              e.preventDefault()
+            }
+            break
+          }
+          // command + shift + d
+          case 'd': {
+            if (e.metaKey && e.shiftKey) {
+              onCommandShiftD()
+              e.preventDefault()
+            }
+            break
+          }
+          case 'w': {
+            if (e.metaKey && e.shiftKey) {
+              onCommandShiftW()
               e.preventDefault()
             }
             break
