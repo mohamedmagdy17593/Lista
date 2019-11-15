@@ -48,7 +48,7 @@ function Nav({ setThemeMode, themeMode }) {
             fontSize: styles.fontSizes[4],
           }}
         >
-          Lista
+          🗒 Lista
         </span>
 
         <Switch
