@@ -1,8 +1,12 @@
-export function visitList(lista, callback) {
+export function visitLista(lista, callback) {
   lista.forEach(item => {
     callback(item)
-    visitList(item.children, callback)
+    visitLista(item.children, callback)
   })
+}
+
+export function last(array) {
+  return array[array.length - 1]
 }
 
 // i don't know how this is work:
@@ -26,4 +30,9 @@ export function getCaretCharOffsetInDiv(element) {
     caretOffset = preCaretTextRange.text.length
   }
   return caretOffset
+}
+
+export function log(a) {
+  console.log(a)
+  return a
 }

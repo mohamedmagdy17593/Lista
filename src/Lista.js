@@ -1,7 +1,7 @@
 /** @jsx jsx */
 import { jsx } from '@emotion/core'
 
-import { createContext, useContext, useEffect, useRef } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useImmerReducer } from 'use-immer'
 import {
   FiPlus,
@@ -14,7 +14,7 @@ import { useTheme } from 'emotion-theming'
 import _ from 'lodash'
 import ContentEditable from 'react-contenteditable'
 import styles from './styles'
-import { visitList, getCaretCharOffsetInDiv } from './utils'
+import { visitLista, getCaretCharOffsetInDiv, last } from './utils'
 
 const listaContext = createContext()
 
@@ -26,7 +26,7 @@ function listaReducer(draft, action) {
       break
     }
     case 'ADD_NEW_ITEM': {
-      visitList(draft, item => {
+      visitLista(draft, item => {
         item.focus = false
       })
       // get index of the currentItem that is clicked
@@ -53,8 +53,21 @@ function listaReducer(draft, action) {
       }
       break
     }
+    case 'CHANGE_FOCUS': {
+      visitLista(draft, item => {
+        item.focus = false
+      })
+      const item = _.get(draft, action.path)
+      if (item) {
+        item.focus = true
+      }
+      break
+    }
     case 'DELETE_ITEM': {
-      visitList(draft, item => {
+      if (draft.length <= 1 && action.path.length <= 1) {
+        break
+      }
+      visitLista(draft, item => {
         item.focus = false
       })
       // get index of the currentItem that is clicked
@@ -63,8 +76,71 @@ function listaReducer(draft, action) {
       const items = _.get(draft, action.path) || draft
       if (currentItemIndex !== undefined) {
         items.splice(currentItemIndex, 1)
-        // set nextItem or previous item focus to true
-        ;(items[currentItemIndex] || items[currentItemIndex - 1]).focus = true
+        if (items.length > 0) {
+          // set nextItem or previous item focus to true
+          ;(items[currentItemIndex] || items[currentItemIndex - 1]).focus = true
+        } else {
+          // set focus to parent
+          action.path.pop()
+          const parentItem = _.get(draft, action.path)
+          parentItem.focus = true
+        }
+      }
+      break
+    }
+    case 'MOVE_UP': {
+      visitLista(draft, item => {
+        item.focus = false
+      })
+      const currentItem = _.get(draft, action.path)
+      const currentIndex = action.path.pop()
+      if (currentIndex === 0) {
+        // get parent item
+        action.path.pop()
+        const parentItem = _.get(draft, action.path)
+        if (parentItem) {
+          parentItem.focus = true
+        } else {
+          currentItem.focus = true
+        }
+      } else {
+        const items = _.get(draft, action.path) || draft
+        // get last child in praveItem recursevly
+        let praveItem = items[currentIndex - 1]
+        while (
+          praveItem.children.length > 0 &&
+          praveItem.hideChildren === false
+        ) {
+          praveItem = last(praveItem.children)
+        }
+        praveItem.focus = true
+      }
+      break
+    }
+    case 'MOVE_DOWN': {
+      visitLista(draft, item => {
+        item.focus = false
+      })
+      const currentItem = _.get(draft, action.path)
+      if (
+        currentItem.children.length > 0 &&
+        currentItem.hideChildren === false
+      ) {
+        currentItem.children[0].focus = true
+      } else {
+        // get next item in pearnt if this is the case
+        let currentIndex, nextItem
+        while (
+          (currentIndex = action.path.pop()) !== undefined &&
+          !(nextItem = (_.get(draft, action.path) || draft)[currentIndex + 1])
+        ) {
+          action.path.pop()
+        }
+        if (nextItem) {
+          nextItem.focus = true
+        } else {
+          currentItem.focus = true
+        }
       }
       break
     }
@@ -84,7 +160,7 @@ function listaReducer(draft, action) {
       break
     }
     case 'TOGGLE_HIDE_CHILDREN': {
-      visitList(draft, item => {
+      visitLista(draft, item => {
         item.focus = false
       })
       const currentItem = _.get(draft, action.path)
@@ -103,15 +179,25 @@ function listaReducer(draft, action) {
 }
 
 function Lista() {
-  const [lista, dispatch] = useImmerReducer(listaReducer, [
-    {
-      id: Math.random(),
-      value: '',
-      focus: true,
-      hideChildren: false,
-      children: [],
-    },
-  ])
+  const [lista, dispatch] = useImmerReducer(
+    listaReducer,
+    null,
+    () =>
+      JSON.parse(window.localStorage.getItem('lista')) || [
+        {
+          id: Math.random(),
+          value: '',
+          focus: true,
+          hideChildren: false,
+          children: [],
+        },
+      ],
+  )
+
+  // save to localStorage onChange
+  useEffect(() => {
+    window.localStorage.setItem('lista', JSON.stringify(lista))
+  }, [lista])
 
   return (
     <listaContext.Provider value={{ lista, dispatch }}>
@@ -161,6 +247,13 @@ function ListaLi({ item, path }) {
     })
   }
 
+  function onFocus() {
+    dispatch({
+      type: 'CHANGE_FOCUS',
+      path,
+    })
+  }
+
   function addNewItem() {
     dispatch({
       type: 'ADD_NEW_ITEM',
@@ -189,19 +282,25 @@ function ListaLi({ item, path }) {
     })
   }
 
+  function moveUp() {
+    dispatch({
+      type: 'MOVE_UP',
+      path,
+    })
+  }
+
+  function moveDown() {
+    dispatch({
+      type: 'MOVE_DOWN',
+      path,
+    })
+  }
+
   return (
     <li
       css={{
         'svg, .svg-placeholder': {
           fontSize: styles.fontSizes[1],
-        },
-        '.show-on-hover': {
-          display: 'none',
-        },
-        ':hover': {
-          '.show-on-hover': {
-            display: 'inline-block',
-          },
         },
       }}
     >
@@ -220,30 +319,47 @@ function ListaLi({ item, path }) {
           onClick={toggleHideChildren}
         ></FiMinus>
       )}{' '}
-      <TextEditor
-        item={item}
-        onChange={handleChange}
-        onEnterAtEndOfLine={addNewItem}
-      ></TextEditor>{' '}
       <span
-        className="show-on-hover"
         css={{
-          marginLeft: styles.spacing[2],
-          svg: { marginLeft: styles.spacing[0] },
+          '.show-on-hover': {
+            visibility: 'hidden',
+          },
+          ':hover': {
+            '.show-on-hover': {
+              visibility: 'visible',
+            },
+          },
         }}
       >
-        <FiTrash
-          css={{ color: theme.colors.danger, marginBottom: -1.3 }}
-          onClick={deleteItem}
-        ></FiTrash>
-        <FiPlusCircle
-          css={{ color: theme.colors.success, marginBottom: -1.5 }}
-          onClick={addNewItem}
-        ></FiPlusCircle>
-        <FiChevronsRight
-          css={{ marginBottom: -1.5 }}
-          onClick={indentItem}
-        ></FiChevronsRight>
+        <TextEditor
+          item={item}
+          onChange={handleChange}
+          onFocus={onFocus}
+          onEnterAtEndOfLine={addNewItem}
+          onTabAtStart={indentItem}
+          onMoveUp={moveUp}
+          onMoveDown={moveDown}
+        ></TextEditor>{' '}
+        <span
+          className="show-on-hover"
+          css={{
+            paddingLeft: styles.spacing[2],
+            svg: { marginLeft: styles.spacing[0] },
+          }}
+        >
+          <FiTrash
+            css={{ color: theme.colors.danger, marginBottom: -1.3 }}
+            onClick={deleteItem}
+          ></FiTrash>
+          <FiPlusCircle
+            css={{ color: theme.colors.success, marginBottom: -1.5 }}
+            onClick={addNewItem}
+          ></FiPlusCircle>
+          <FiChevronsRight
+            css={{ marginBottom: -1.5 }}
+            onClick={indentItem}
+          ></FiChevronsRight>
+        </span>
       </span>
       {item.children.length > 0 && !item.hideChildren && (
         <ListaUl lista={item.children} path={[...path, 'children']}></ListaUl>
@@ -252,8 +368,19 @@ function ListaLi({ item, path }) {
   )
 }
 
-function TextEditor({ item, onChange, onEnterAtEndOfLine }) {
+function TextEditor({
+  item,
+  onChange,
+  onFocus,
+  onEnterAtEndOfLine,
+  onTabAtStart,
+  onMoveUp,
+  onMoveDown,
+  ...rest
+}) {
+  const theme = useTheme()
   const editorRef = useRef()
+  const [innerText, setInnerText] = useState('')
 
   useEffect(() => {
     if (item.focus) {
@@ -263,25 +390,83 @@ function TextEditor({ item, onChange, onEnterAtEndOfLine }) {
     }
   }, [item.focus])
 
+  useEffect(() => {
+    setInnerText(editorRef.current.el.current.innerText)
+  }, [item.value])
+
   return (
     <ContentEditable
       ref={editorRef}
-      css={{
-        display: 'inline-block',
-        minWidth: 30,
-      }}
+      css={[
+        {
+          display: 'inline-block',
+          minWidth: 30,
+        },
+        innerText.trim().length === 0 && {
+          border: `1px solid ${theme.colors.danger}`,
+        },
+      ]}
       html={item.value}
       onChange={onChange}
-      onKeyPress={e => {
-        if (e.key === 'Enter') {
-          const cursorPosition = getCaretCharOffsetInDiv(e.target)
-          const divContentLength = e.target.innerText.replace(/\s/g, '').length
-          if (cursorPosition === divContentLength) {
-            onEnterAtEndOfLine()
-            e.preventDefault()
+      onFocus={onFocus}
+      onKeyDown={e => {
+        switch (e.key) {
+          case 'Enter': {
+            const cursorPosition = getCaretCharOffsetInDiv(e.target)
+            const divContentLength = e.target.innerText.replace(/\n/g, '')
+              .length
+            if (cursorPosition === divContentLength) {
+              onEnterAtEndOfLine()
+              e.preventDefault()
+            }
+            break
+          }
+          case 'ArrowUp': {
+            let node = window.getSelection().getRangeAt(0).startContainer
+            let hasbr = false
+            while ((node = node.previousSibling) !== null) {
+              if (node.nodeName === 'BR') {
+                hasbr = true
+                break
+              }
+            }
+            if (!hasbr) {
+              // we are at first line in this container
+              onMoveUp()
+              e.preventDefault()
+            }
+            break
+          }
+          case 'ArrowDown': {
+            let node = window.getSelection().getRangeAt(0).startContainer
+            let hasbr = false
+            while ((node = node.nextSibling) !== null) {
+              if (node.nodeName === 'BR') {
+                hasbr = true
+                break
+              }
+            }
+            if (!hasbr) {
+              // we are at last line in this container
+              onMoveDown()
+              e.preventDefault()
+            }
+            break
+          }
+          case 'Tab': {
+            const cursorPosition = getCaretCharOffsetInDiv(e.target)
+            if (cursorPosition === 0) {
+              onTabAtStart()
+              e.preventDefault()
+            }
+            break
+          }
+          default: {
+            // dont do any thing
           }
         }
       }}
+      {...rest}
     ></ContentEditable>
   )
 }
