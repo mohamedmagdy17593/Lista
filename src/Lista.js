@@ -8,6 +8,7 @@ import {
   FiTrash,
   FiPlusCircle,
   FiChevronsRight,
+  FiChevronsLeft,
   FiMinus,
 } from 'react-icons/fi'
 import { useTheme } from 'emotion-theming'
@@ -54,13 +55,14 @@ function listaReducer(draft, action) {
       break
     }
     case 'CHANGE_FOCUS': {
+      const item = _.get(draft, action.path)
+      if (!item || item.focus) {
+        return
+      }
       visitLista(draft, item => {
         item.focus = false
       })
-      const item = _.get(draft, action.path)
-      if (item) {
-        item.focus = true
-      }
+      item.focus = true
       break
     }
     case 'DELETE_ITEM': {
@@ -122,6 +124,9 @@ function listaReducer(draft, action) {
         item.focus = false
       })
       const currentItem = _.get(draft, action.path)
+      if (currentItem === undefined) {
+        return
+      }
       if (
         currentItem.children.length > 0 &&
         currentItem.hideChildren === false
@@ -156,6 +161,23 @@ function listaReducer(draft, action) {
         items.splice(currentItemIndex, 1)
         upperItem.children.push(currentItem)
         upperItem.hideChildren = false
+      }
+      break
+    }
+    case 'UNINDENT_ITEM': {
+      // get index of the currentItem that is clicked
+      const currentItemIndex = action.path.pop()
+      // get parant array
+      const items = _.get(draft, action.path) || draft
+      // get parant parant index & array
+      action.path.pop() // children
+      const parentIndex = action.path.pop()
+      console.log(parentIndex)
+      if (parentIndex !== undefined) {
+        const currentItem = items[currentItemIndex]
+        items.splice(currentItemIndex, 1)
+        const parentArray = _.get(draft, action.path) || draft
+        parentArray.splice(parentIndex + 1, 0, currentItem)
       }
       break
     }
@@ -274,6 +296,13 @@ function ListaLi({ item, path }) {
     })
   }
 
+  function unIndentItem() {
+    dispatch({
+      type: 'UNINDENT_ITEM',
+      path,
+    })
+  }
+
   function toggleHideChildren() {
     dispatch({
       type: 'TOGGLE_HIDE_CHILDREN',
@@ -335,7 +364,8 @@ function ListaLi({ item, path }) {
           onChange={handleChange}
           onFocus={onFocus}
           onEnterAtEndOfLine={addNewItem}
-          onTabAtStart={indentItem}
+          onTab={indentItem}
+          onCommandTab={unIndentItem}
           onMoveUp={moveUp}
           onMoveDown={moveDown}
           onCommandShiftD={deleteItem}
@@ -360,6 +390,10 @@ function ListaLi({ item, path }) {
             css={{ marginBottom: -1.5 }}
             onClick={indentItem}
           ></FiChevronsRight>
+          <FiChevronsLeft
+            css={{ marginBottom: -1.5 }}
+            onClick={unIndentItem}
+          ></FiChevronsLeft>
         </span>
       </span>
       {item.children.length > 0 && !item.hideChildren && (
@@ -369,12 +403,17 @@ function ListaLi({ item, path }) {
   )
 }
 
+/**
+ * this Component has alot of hacks
+ * but it's coool 🤓
+ */
 function TextEditor({
   item,
   onChange,
   onFocus,
   onEnterAtEndOfLine,
-  onTabAtStart,
+  onTab,
+  onCommandTab,
   onMoveUp,
   onMoveDown,
   onCommandShiftD,
@@ -385,9 +424,28 @@ function TextEditor({
   const editorRef = useRef()
   const [innerText, setInnerText] = useState('')
 
+  // hack 🤓
+  // add all method to refs
+  // becouse ContentEditable regester events from first time only
+  const methodRefs = useRef()
+  methodRefs.current = {
+    onChange,
+    onFocus,
+    onEnterAtEndOfLine,
+    onTab,
+    onCommandTab,
+    onMoveUp,
+    onMoveDown,
+    onCommandShiftD,
+    onCommandShiftW,
+  }
+
+  // another hack 🤓
+  const preventNextFocusRef = useRef(false)
   useEffect(() => {
     if (item.focus) {
       setTimeout(() => {
+        preventNextFocusRef.current = true
         editorRef.current.el.current.focus()
       })
     }
@@ -410,17 +468,22 @@ function TextEditor({
         },
       ]}
       html={item.value}
-      onChange={onChange}
-      onFocus={onFocus}
+      onChange={methodRefs.current.onChange}
+      onFocus={e => {
+        if (preventNextFocusRef.current) {
+          preventNextFocusRef.current = false
+        } else {
+          methodRefs.current.onFocus(e)
+        }
+      }}
       onKeyDown={e => {
-        console.log(e.key)
         switch (e.key) {
           case 'Enter': {
             const cursorPosition = getCaretCharOffsetInDiv(e.target)
             const divContentLength = e.target.innerText.replace(/\n/g, '')
               .length
             if (cursorPosition === divContentLength) {
-              onEnterAtEndOfLine()
+              methodRefs.current.onEnterAtEndOfLine()
               e.preventDefault()
             }
             break
@@ -436,7 +499,7 @@ function TextEditor({
             }
             if (!hasbr) {
               // we are at first line in this container
-              onMoveUp()
+              methodRefs.current.onMoveUp()
               e.preventDefault()
             }
             break
@@ -452,30 +515,31 @@ function TextEditor({
             }
             if (!hasbr) {
               // we are at last line in this container
-              onMoveDown()
+              methodRefs.current.onMoveDown()
               e.preventDefault()
             }
             break
           }
           case 'Tab': {
-            const cursorPosition = getCaretCharOffsetInDiv(e.target)
-            if (cursorPosition === 0) {
-              onTabAtStart()
-              e.preventDefault()
+            if (e.shiftKey) {
+              methodRefs.current.onCommandTab()
+            } else {
+              methodRefs.current.onTab()
             }
+            e.preventDefault()
             break
           }
           // command + shift + d
           case 'd': {
             if (e.metaKey && e.shiftKey) {
-              onCommandShiftD()
+              methodRefs.current.onCommandShiftD()
               e.preventDefault()
             }
             break
           }
           case 'w': {
             if (e.metaKey && e.shiftKey) {
-              onCommandShiftW()
+              methodRefs.current.onCommandShiftW()
               e.preventDefault()
             }
             break

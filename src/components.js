@@ -23,7 +23,7 @@ export function EmojiIcon({ lable, emoji }) {
 }
 
 export const Container = styled.div({
-  maxWidth: 1024,
+  maxWidth: 960,
   margin: '0 auto',
-  padding: `0 ${styles.spacing[1]}px`,
+  padding: `0 ${styles.spacing[4]}px`,
 })
