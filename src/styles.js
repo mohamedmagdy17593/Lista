@@ -25,7 +25,7 @@ export default {
       lightText: '#9AA5B1',
       danger: '#E66A6A',
       success: '#7BC47F',
-      warning: '#F9DA8B',
+      warning: '#C99A2E',
     },
   },
   dark: {

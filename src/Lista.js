@@ -536,9 +536,35 @@ function TextEditor({
             }
             break
           }
+          // command + shift + w
           case 'w': {
             if (e.metaKey && e.shiftKey) {
               methodRefs.current.onCommandShiftW()
+              e.preventDefault()
+            }
+            break
+          }
+          // command + b
+          case 'b': {
+            if (e.metaKey) {
+              document.execCommand('bold', false)
+              e.preventDefault()
+            }
+            break
+          }
+          // command + i
+          case 'i': {
+            if (e.metaKey) {
+              document.execCommand('italic', false)
+              e.preventDefault()
+            }
+            break
+          }
+          // command + l
+          case 'l': {
+            if (e.metaKey) {
+              const link = prompt('Link:')
+              document.execCommand('createLink', false, link)
               e.preventDefault()
             }
             break

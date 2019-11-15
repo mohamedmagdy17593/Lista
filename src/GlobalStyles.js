@@ -18,7 +18,7 @@ function GlobalStyles() {
     <Global
       styles={[
         `
-          @import url('https://fonts.googleapis.com/css?family=Open+Sans&display=swap');
+          @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap');
         `,
         {
           'html, body': {
@@ -28,6 +28,14 @@ function GlobalStyles() {
             fontFamily: `'Open Sans', sans-serif`,
             background: theme.colors.bg,
             color: theme.colors.text,
+          },
+          a: {
+            color: theme.colors.warning,
+            cursor: 'pointer',
+            textDecoration: 'none',
+            ':hover': {
+              textDecoration: 'underline',
+            },
           },
         },
         lazyStyles,
