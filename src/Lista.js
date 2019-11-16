@@ -14,7 +14,7 @@ import {
 import { useTheme } from 'emotion-theming'
 import ContentEditable from 'react-contenteditable'
 import styles from './styles'
-import { getCaretCharOffsetInDiv } from './utils'
+import { getCaretCharOffsetInDiv, isLink } from './utils'
 import listaReducer from './listaReducer'
 
 const listaContext = createContext()
@@ -411,8 +411,20 @@ function TextEditor({
           // command + l
           case 'l': {
             if (e.metaKey) {
-              const link = prompt('Link:')
-              document.execCommand('createLink', false, link)
+              if (isLink()) {
+                document.execCommand('unlink', false)
+              } else {
+                const link = prompt('Link:')
+                document.execCommand('createLink', false, link)
+              }
+              e.preventDefault()
+            }
+            break
+          }
+          // command + shift + x
+          case 'x': {
+            if (e.metaKey && e.shiftKey) {
+              document.execCommand('strikeThrough', false)
               e.preventDefault()
             }
             break

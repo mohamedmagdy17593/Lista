@@ -32,6 +32,26 @@ export function getCaretCharOffsetInDiv(element) {
   return caretOffset
 }
 
+// this also i dont know what it's mean
+// check if selection text is link
+export function isLink() {
+  if (window.getSelection().toString !== '') {
+    const selection = window.getSelection().getRangeAt(0)
+    if (selection) {
+      if (
+        selection.startContainer.parentNode.tagName === 'A' ||
+        selection.endContainer.parentNode.tagName === 'A'
+      ) {
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return false
+    }
+  }
+}
+
 export function log(a) {
   console.log(a)
   return a
