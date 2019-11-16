@@ -45,7 +45,6 @@ function Lista() {
       <div
         css={{
           fontSize: styles.fontSizes[3],
-          fontWeight: 'lighter',
           ul: {
             paddingLeft: styles.spacing[4],
           },
