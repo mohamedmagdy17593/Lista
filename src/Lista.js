@@ -196,15 +196,15 @@ function ListaLi({ item, path }) {
           item={item}
           onChange={handleChange}
           onFocus={onFocus}
-          onEnterAtEndOfLine={addNewItem}
-          onTab={indentItem}
-          onCommandTab={unIndentItem}
+          onCreateItem={addNewItem}
+          onIndent={indentItem}
+          onUnIndent={unIndentItem}
           onMoveUp={moveUp}
           onMoveDown={moveDown}
-          onCommandShiftD={deleteItem}
-          onCommandShiftW={toggleHideChildren}
-          onAltUp={swapUp}
-          onAltDown={swapDown}
+          onDeleteItem={deleteItem}
+          onToggleChildrens={toggleHideChildren}
+          onSwapUp={swapUp}
+          onSwapDown={swapDown}
         ></TextEditor>{' '}
         <span
           className="show-on-hover"
@@ -246,15 +246,15 @@ function TextEditor({
   item,
   onChange,
   onFocus,
-  onEnterAtEndOfLine,
-  onTab,
-  onCommandTab,
+  onCreateItem,
+  onIndent,
+  onUnIndent,
   onMoveUp,
   onMoveDown,
-  onCommandShiftD,
-  onCommandShiftW,
-  onAltUp,
-  onAltDown,
+  onDeleteItem,
+  onToggleChildrens,
+  onSwapUp,
+  onSwapDown,
   ...rest
 }) {
   const theme = useTheme()
@@ -268,15 +268,15 @@ function TextEditor({
   methodRefs.current = {
     onChange,
     onFocus,
-    onEnterAtEndOfLine,
-    onTab,
-    onCommandTab,
+    onCreateItem,
+    onIndent,
+    onUnIndent,
     onMoveUp,
     onMoveDown,
-    onCommandShiftD,
-    onCommandShiftW,
-    onAltUp,
-    onAltDown,
+    onDeleteItem,
+    onToggleChildrens,
+    onSwapUp,
+    onSwapDown,
   }
 
   // another hack 🤓
@@ -316,20 +316,28 @@ function TextEditor({
         }
       }}
       onKeyDown={e => {
+        console.log(e.key)
         switch (e.key) {
           case 'Enter': {
             const cursorPosition = getCaretCharOffsetInDiv(e.target)
             const divContentLength = e.target.innerText.replace(/\n/g, '')
               .length
             if (cursorPosition === divContentLength) {
-              methodRefs.current.onEnterAtEndOfLine()
+              methodRefs.current.onCreateItem()
+              e.preventDefault()
+            }
+            break
+          }
+          case 'Backspace': {
+            if (e.target.innerText.length === 0) {
+              methodRefs.current.onDeleteItem()
               e.preventDefault()
             }
             break
           }
           case 'ArrowUp': {
             if (e.altKey) {
-              methodRefs.current.onAltUp()
+              methodRefs.current.onSwapUp()
             } else {
               let node = window.getSelection().getRangeAt(0).startContainer
               let hasbr = false
@@ -349,7 +357,7 @@ function TextEditor({
           }
           case 'ArrowDown': {
             if (e.altKey) {
-              methodRefs.current.onAltDown()
+              methodRefs.current.onSwapDown()
             } else {
               let node = window.getSelection().getRangeAt(0).startContainer
               let hasbr = false
@@ -369,9 +377,9 @@ function TextEditor({
           }
           case 'Tab': {
             if (e.shiftKey) {
-              methodRefs.current.onCommandTab()
+              methodRefs.current.onUnIndent()
             } else {
-              methodRefs.current.onTab()
+              methodRefs.current.onIndent()
             }
             e.preventDefault()
             break
@@ -379,7 +387,7 @@ function TextEditor({
           // command + shift + d
           case 'd': {
             if (e.metaKey && e.shiftKey) {
-              methodRefs.current.onCommandShiftD()
+              methodRefs.current.onDeleteItem()
               e.preventDefault()
             }
             break
@@ -387,7 +395,7 @@ function TextEditor({
           // command + shift + w
           case 'w': {
             if (e.metaKey && e.shiftKey) {
-              methodRefs.current.onCommandShiftW()
+              methodRefs.current.onToggleChildrens()
               e.preventDefault()
             }
             break
